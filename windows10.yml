@@ -20,7 +20,6 @@ services:
 
     volumes:
       - windows-data-iso:/storage
-      - ./win10.iso:/custom.iso
 
     devices:
       - "/dev/kvm:/dev/kvm"

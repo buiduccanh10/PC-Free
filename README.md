@@ -160,6 +160,67 @@ volumes:
   windows-data:
 ```
 
+## Tải ISO Windows 10 thủ công khi tải tự động bị lỗi
+
+Nếu Dockur không tải được bộ cài Windows, có thể tải ISO trực tiếp từ Microsoft rồi gắn tạm vào container để cài đặt. Link tải ISO trực tiếp của Microsoft có thể hết hạn, vì vậy hãy lấy link mới từ [trang tải Windows 10 chính thức](https://www.microsoft.com/software-download/windows10ISO). Không dùng ISO từ nguồn không rõ ràng.
+
+### 1. Tải ISO bằng `curl`
+
+Trên trang Microsoft, chọn Windows 10 và ngôn ngữ, sau đó sao chép link tải ISO trực tiếp. Chạy trong terminal Codespaces, thay URL mẫu bằng link vừa sao chép:
+
+```bash
+curl --fail --location --retry 5 --retry-delay 2 \
+  --output win10.iso \
+  'PASTE_OFFICIAL_MICROSOFT_ISO_DOWNLOAD_URL_HERE'
+```
+
+Kiểm tra file đã tải xong:
+
+```bash
+file win10.iso
+ls -lh win10.iso
+```
+
+Nếu `curl` báo lỗi hoặc file tải về nhỏ bất thường, lấy link mới từ trang Microsoft rồi thử lại. Không tiếp tục cài từ file tải dở.
+
+### 2. Gắn ISO để cài Windows
+
+Trong `windows10.yml`, tạm thêm bind mount ISO dưới volume `/storage`:
+
+```yaml
+    volumes:
+      - windows-data-iso:/storage
+      - ./win10.iso:/custom.iso
+```
+
+Giữ nguyên volume hiện có của bạn nếu tên volume khác. Khởi động container:
+
+```bash
+docker compose -f windows10.yml up -d --force-recreate windows
+docker logs -f windows
+```
+
+Chờ quá trình cài đặt hoàn tất và thấy `Windows started successfully`. Cài đặt lần đầu có thể mất vài phút.
+
+> Nếu Windows đã được cài và khởi động từ volume trước đó, không cần gắn lại ISO. ISO chỉ cần trong lúc cài; gắn một ISO khác vào volume Windows đã có sẵn không cài lại Windows.
+
+### 3. Tháo ISO và giải phóng dung lượng
+
+Dừng và xóa container nhưng **giữ lại volume dữ liệu**:
+
+```bash
+docker compose -f windows10.yml down
+```
+
+Xóa dòng bind mount `./win10.iso:/custom.iso` khỏi `windows10.yml`, chỉ giữ volume `/storage`. Sau đó xóa ISO trong workspace và khởi động Windows lại:
+
+```bash
+rm win10.iso
+docker compose -f windows10.yml up -d
+```
+
+`rm win10.iso` giải phóng dung lượng của file ISO trong workspace. Volume Docker chứa ổ Windows vẫn được giữ lại vì lệnh `down` không có `-v`. **Không chạy `docker compose down -v`** nếu muốn giữ Windows và dữ liệu trong máy ảo.
+
 ---
 
 ## 🗝️ Archivo `.env`
